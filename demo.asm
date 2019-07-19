@@ -1,95 +1,57 @@
-;  note name: e6,	frequency: 1318.51 Hz,	duration 0.1500 s
-;  note name: e6,	frequency: 1318.51 Hz,	duration 0.1500 s
-;  note name: pause,	frequency:    0.00 Hz,	duration 0.0750 s
-;  note name: e6,	frequency: 1318.51 Hz,	duration 0.3000 s
-;  note name: c6,	frequency: 1046.50 Hz,	duration 0.1500 s
-;  note name: e6,	frequency: 1318.51 Hz,	duration 0.3000 s
-;  note name: g6,	frequency: 1567.98 Hz,	duration 0.3000 s
-;  note name: pause,	frequency:    0.00 Hz,	duration 0.3000 s
-;  note name: g5,	frequency:  783.99 Hz,	duration 0.3000 s
-;  note name: pause,	frequency:    0.00 Hz,	duration 0.3000 s
-
 bits 16
 org 0x7c00
 
-%define num_notes 9
-
-_start:
-    xor     ax, ax
+st: xor     ax, ax              ; init
     mov     ds, ax
-
     mov     ah, 0xa0
     mov     es, ax
-
     mov     ax, 0x13
     int     0x10
 
-    mov     al, 0xb6        ; Prepare the speaker for the
-    out     0x43, al        ;  note.
-
-    mov     si, _notes
-    mov     di, _durations
-    mov     dx, num_notes
-;    xor     cx, cx
-
-.play:
-    mov     cl, byte [di]
+    mov     al, 0xb6            ; snd
+    out     0x43, al
+    mov     si, notes
+    mov     di, durations
+    mov     dx, 9               ; len
+.p: mov     cl, byte [di]
     inc     di
     lodsw
-
-    out     0x42, al        ; Output low byte.
+    out     0x42, al
     mov     al, ah
     out     0x42, al
-    in      al, 0x61        ; Turn on note (get value from
+    in      al, 0x61
     or      al, 3
-    out     0x61, al        ; Send new value.
-
+    out     0x61, al
     mov     ax, 0x8600
-    int     0x15            ; sleep
-
+    int     0x15
     in      al, 0x61
     and     al, 0xfc
     out     0x61, al
-
     dec     dx
-    jnz     .play
+    jnz     .p
 
-
-    mov     bp, pal_mario
+    mov     bp, palette
     rdtsc
     and     ax, 1
-    jz      .ok
-    add     bp, 4
-.ok:
-;    xor     ax, ax
-    mov     dx, 92
+    jz      .k
+    add     bp, 4               ; 2nd palette
+.k: mov     dx, 92              ; center
     mov     cx, 152
-.b:
-    mov     bx, 4
+.b: mov     bx, 4
     add     bx, ax
-.a:
-    test    al, 1
+.a: test    al, 1
     jnz     .d
     inc     dx
     inc     dx
 .d: dec     dx
-.e:
-
     mov     si, frame_3
     call    dr
-
-;    mov     si, frame_2
     call    dr
-
-;    mov     si, frame_1
     call    dr
-
     dec     bx
     jnz     .a
-
     mov     bx, 16
-.c:
-    mov     si, frame_0
+.c: mov     si, frame_0
     call    dr
     dec     bx
     jnz     .c
@@ -99,38 +61,21 @@ _start:
     pop     dx
     jmp     .b
 
-;mv: inc     cx
-;    test    ax, 3
-;    jnz     .b
-;    dec     cx
-;.b: test    ax, 1
-;    jnz     .a
-;    dec     dx
-;    jmp     .z
-;.a: inc     dx
-;.z: ret
-
-_notes     dw  3619, 3619,  1, 3619, 4560, 3619, 3043, 1, 6087,
-_durations db     2,    2,  1,    4,    2,    4,    4, 4,    4,
-
-pal_mario    db 0x00,0x28,0x2b,0x44 ; mario palette
-pal_luigi    db 0x00,0x0f,0x02,0x2b ; luigi palette
-
-dr: inc     cx ;call    mv
+dr: inc     cx
     pusha
-    mov     ax, 320                 ; si = image
+    mov     ax, 320
     mul     dx
     add     ax, cx
-    mov     di, ax                  ; dx, cx = coordinates for top left corner of img
+    mov     di, ax
     mov     cx, 16
     xor     dl, dl
     sub     di, 320
-.a: mov     byte [es:di], dl        ; zap pixels above
+.a: mov     byte [es:di], dl    ; clear above
     inc     di
     loop    .a
     add     di, 320 - 16
 .b: dec     di
-    mov     byte [es:di], dl        ; zap pixel to the left
+    mov     byte [es:di], dl    ; clear left
     inc     di
 .c: lodsb
 .d: rol     al, 2
@@ -146,19 +91,25 @@ dr: inc     cx ;call    mv
     test    cl, 15
     jnz     .c
     xor     dl, dl
-    mov     byte [es:di], dl        ; zap pixel to the right
-    add     di, 320 - 16            ; next row
+    mov     byte [es:di], dl    ; clear right
+    add     di, 320 - 16        ; next row
     test    cx, 0xff
-    jnz     .b                      ; dl = 0
+    jnz     .b
     shr     cx, 4
     xor     al, al
-    rep     stosb
+    rep     stosb               ; clear below
     inc     cx
     mov     ax, 0x8600
     int     0x15
     popa
     add     si, 64
     ret
+
+notes       dw  3619, 3619,  1, 3619, 4560, 3619, 3043, 1, 6087,
+durations   db     2,    2,  1,    4,    2,    4,    4, 4,    4,
+
+palette     db 0x00,0x28,0x2b,0x44  ; mario
+            db 0x00,0x0f,0x02,0x2b  ; luigi
 
 frame_3:
 db 0x00, 0x15, 0x50, 0x00,
