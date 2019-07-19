@@ -22,7 +22,8 @@ _start:
     mov     dx, 92
     mov     cx, 152
 .b:
-    mov     bx, 10
+    mov     bx, 4
+    add     bx, ax
 .a:
     mov     si, frame_3
     call    dr
@@ -39,7 +40,7 @@ _start:
     dec     bx
     jnz     .a
 
-    mov     bx, 15
+    mov     bx, 16
 .c:
     mov     si, frame_0
     call    dr
@@ -47,12 +48,12 @@ _start:
     jnz     .c
     push    dx
     rdtsc
+    and     ax, 15
     pop     dx
     jmp     .b
     hlt
 
 dir:inc     cx
-    and     ax, 3
     test    ax, 3
     jnz     .b
     dec     cx
