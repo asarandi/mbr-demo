@@ -12,7 +12,7 @@
 bits 16
 org 0x7c00
 
-%define notes 9
+%define num_notes 9
 
 _start:
         xor     ax, ax
@@ -21,10 +21,14 @@ _start:
         mov     al, 0xb6        ; Prepare the speaker for the
         out     0x43, al        ;  note.
 
-        mov     si, _snd
-        mov     cx, notes
+        mov     si, _notes
+        mov     di, _durations
+        mov     dx, num_notes
+        xor     cx, cx
 
 .play:
+        mov     cl, byte [di]
+        inc     di
         lodsw
 
         out     0x42, al        ; Output low byte.
@@ -34,41 +38,22 @@ _start:
         or      al, 3
         out     0x61, al        ; Send new value.
 
-        add     si, notes * 2
-        sub     si, 2
-        mov     ax, word [si]
-        sub     si, notes * 2
-        call    .sl
+        mov     ax, 0x8600
+        int     0x15
 
         in      al, 0x61
         and     al, 0xfc
         out     0x61, al
 
-        mov     dx, 4        
-.x      mov     ax, -1
-.z:     dec     ax
-        jnz     .z
         dec     dx
-        jnz     .x
-        
-        loop    .play
+        jnz     .play
 
 
         hlt
-        ret
-.sl:
-        push    cx
-        mov     cx, ax
-        shl     cx, 1
-        xor     dx, dx
-        mov     ax, 0x8600
-        int     0x15
-        pop     cx
-        ret
 
 
-_snd:    dw  3619, 3619,  1, 3619, 4560, 3619, 3043, 1, 6087, 
-         dw     2,    2,  1,    4,    2,    4,    4, 4,    4, 
+_notes     dw  3619, 3619,  1, 3619, 4560, 3619, 3043, 1, 6087, 
+_durations db     2,    2,  1,    4,    2,    4,    4, 4,    4, 
 
 times 510 - ($ - $$) db 0
 db 0x55, 0xaa
