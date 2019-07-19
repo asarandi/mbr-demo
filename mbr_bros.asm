@@ -1,0 +1,244 @@
+bits 16
+org 0x7c00
+
+_start:
+
+    xor     ax, ax
+    mov     ds, ax
+
+    mov     ax, 0x13
+    int     0x10
+
+    mov     ax, 0xa000
+    mov     es, ax
+
+    rdtsc
+    and     ax, 1
+    jz      .s
+    mov     ax, pal_luigi
+    mov     di, palette
+    mov     word [di], ax
+.s:
+
+
+;    xor     bp, bp
+;
+;.b:
+;    mov     bl, 10
+;.a:
+;    mov     si, frame_3
+;    call    dr
+;    inc     bp
+;
+;    mov     si, frame_2
+;    call    dr
+;    inc     bp
+;
+;    mov     si, frame_1
+;    call    dr
+;    inc     bp
+;
+;    dec     bl
+;    jnz     .a
+;
+;    mov     bl, 15
+;.c:
+    xor     cx, cx
+    xor     dx, dx
+    mov     si, frame_0
+    call    dr
+;    dec     bl
+;    jnz     .c
+;
+;    cmp     bp, 320
+;    jl      .b
+;    sub     bp, 320
+;    jmp     .b
+;.z:
+    hlt
+
+sl: mov     ax, 0x8600
+    mov     dx, 0 ;0x7fff
+    mov     cx, 0x1
+    int     0x15
+    ret
+
+tr: push    si                      ; input: dl = color index, 0-3
+    mov     si, word [palette]      ; output: dl = color byte from palette
+    and     dx, 3
+    add     si, dx
+    mov     dl, byte [si]
+    pop     si
+    ret
+
+palette      dw pal_mario
+pal_mario    db 0x00,0x28,0x2b,0x44 ; mario palette
+pal_luigi    db 0x00,0x0f,0x02,0x2b ; luigi palette
+
+
+px: cmp     di, 320 * 200           ; di = video memory address 0-63999
+    jl      .ok                     ; dl = color byte
+    sub     di, 320 * 200           ; wrap around
+.ok:mov     byte [es:di], dl
+    ret
+
+dr: mov     ax, cx                  ; si = image 
+    mov     cx, dx
+    test    cx, cx
+    jz      .f
+.h: add     ax, 320
+    loop    .h
+.f:    
+    xor     ax, ax
+;    mul     dx                      ; cx = column number, 0-319
+;    add     ax, cx                  ; dx = row number, 0-199
+    mov     di, 0xf100; ax                  ; dx, cx = coordinates for top left corner of img
+    xor     cx, cx
+    mul     cx                      ; clear ax, dx
+    or      cl, 16
+    sub     di, 320
+.a: call    px                      ; zap pixels above
+    inc     di
+    loop    .a
+    add     di, 320 - 16
+.b: dec     di                      ;
+    xor     dl, dl
+    call    px                      ; zap pixel to the left
+    inc     di
+.c: lodsb
+.d: rol     al, 2
+    mov     dl, al
+    call    tr
+    call    px    
+    inc     di
+    inc     cx
+    mov     dl, cl
+    and     dl, 3
+    jnz     .d
+    mov     dl, cl
+    and     dl, 15
+    jnz     .c
+    xor     dl, dl
+    call    px                      ; zap pixel to the right
+    add     di, 320 - 16            ; next row
+    mov     dx, cx
+    and     dx, 0xff
+    jnz     .b                      ; dl = 0
+    shr     cx, 1                   ; cx = 0x10
+.e: call    px                      ; zap pixels below
+    inc     di
+    loop    .e
+    call    sl
+    ret
+
+;
+;
+;dr: xor     cx, cx                  ; si = image 
+;.a: mov     ax, 320                 ; cx = column number
+;    mov     dx, cx                  ; dx = row number    
+;    shr     dx, 4                   ; dx, cx = coordinates for top left corner of img
+;    mul     dx
+;    mov     di, 320 * 92
+;    add     di, ax
+;    add     di, bp
+;    xor     al, al
+;    dec     di
+;    mov     byte [es:di], al
+;    inc     di
+;.b: lodsb
+;.c: rol     al, 2
+;    mov     dl, al
+;    call    tr
+;    mov     byte [es:di], dl
+;    inc     di
+;    inc     cx
+;    mov     dl, cl
+;    and     dl, 3
+;    jnz     .c
+;    mov     dl, cl
+;    and     dl, 15
+;    jnz     .b
+;    mov     dx, cx
+;    and     dx, 0xff
+;    jnz     .a
+;    add     di, 304
+;    mov     al, 0
+;    mov     cx, 16
+;    repnz   stosb
+;    call    sl
+;.z: ret
+;
+frame_0:
+db 0x00, 0x15, 0x50, 0x00, 
+db 0x00, 0x55, 0x55, 0x40, 
+db 0x00, 0xab, 0xec, 0x00, 
+db 0x02, 0xef, 0xef, 0xc0, 
+db 0x02, 0xeb, 0xfb, 0xf0, 
+db 0x02, 0xbf, 0xea, 0x80, 
+db 0x00, 0x3f, 0xff, 0x00, 
+db 0x00, 0xa6, 0xa0, 0x00, 
+db 0x02, 0xa6, 0x9a, 0x80, 
+db 0x0a, 0xa5, 0x5a, 0xa0, 
+db 0x0f, 0x9d, 0x76, 0xf0, 
+db 0x0f, 0xd5, 0x57, 0xf0, 
+db 0x0f, 0x55, 0x55, 0xf0, 
+db 0x00, 0x54, 0x15, 0x00, 
+db 0x02, 0xa0, 0x0a, 0x80, 
+db 0x0a, 0xa0, 0x0a, 0xa0, 
+
+frame_1:
+db 0x00, 0x00, 0x00, 0x00, 
+db 0x00, 0x15, 0x50, 0x00, 
+db 0x00, 0x55, 0x55, 0x40, 
+db 0x00, 0xab, 0xec, 0x00, 
+db 0x02, 0xef, 0xef, 0xc0, 
+db 0x02, 0xeb, 0xfb, 0xf0, 
+db 0x02, 0xbf, 0xea, 0x80, 
+db 0x00, 0x3f, 0xff, 0x00, 
+db 0x00, 0xaa, 0x63, 0x00, 
+db 0x03, 0xaa, 0xaf, 0xc0, 
+db 0x0f, 0x6a, 0xaf, 0x00, 
+db 0x0a, 0x55, 0x54, 0x00, 
+db 0x09, 0x55, 0x54, 0x00, 
+db 0x29, 0x51, 0x50, 0x00, 
+db 0x20, 0x0a, 0x80, 0x00, 
+db 0x00, 0x0a, 0xa0, 0x00, 
+
+frame_2:
+db 0x00, 0x15, 0x50, 0x00, 
+db 0x00, 0x55, 0x55, 0x40, 
+db 0x00, 0xab, 0xec, 0x00, 
+db 0x02, 0xef, 0xef, 0xc0, 
+db 0x02, 0xeb, 0xfb, 0xf0, 
+db 0x02, 0xbf, 0xea, 0x80, 
+db 0x00, 0x3f, 0xff, 0x00, 
+db 0x00, 0xa6, 0xa0, 0x00, 
+db 0x02, 0xa9, 0x68, 0x00, 
+db 0x02, 0xa5, 0xd7, 0x00, 
+db 0x02, 0xa9, 0x55, 0x00, 
+db 0x01, 0xaf, 0xd5, 0x00, 
+db 0x00, 0x6f, 0x54, 0x00, 
+db 0x00, 0x15, 0xa8, 0x00, 
+db 0x00, 0x2a, 0xaa, 0x00, 
+db 0x00, 0x2a, 0x80, 0x00, 
+
+frame_3:
+db 0x00, 0x15, 0x50, 0x00, 
+db 0x00, 0x55, 0x55, 0x40, 
+db 0x00, 0xab, 0xec, 0x00, 
+db 0x02, 0xef, 0xef, 0xc0, 
+db 0x02, 0xeb, 0xfb, 0xf0, 
+db 0x02, 0xbf, 0xea, 0x80, 
+db 0x00, 0x3f, 0xff, 0x00, 
+db 0x0a, 0xa5, 0xa0, 0x00, 
+db 0xfa, 0xa5, 0x6a, 0xfc, 
+db 0xfc, 0xa7, 0x56, 0xbc, 
+db 0xf0, 0x55, 0x54, 0x20, 
+db 0x01, 0x55, 0x55, 0xa0, 
+db 0x05, 0x55, 0x55, 0xa0, 
+db 0x29, 0x50, 0x15, 0xa0, 
+db 0x2a, 0x00, 0x00, 0x00, 
+db 0x0a, 0x80, 0x00, 0x00, 
+
+times 510 - ($ - $$) db 0
+db 0x55, 0xaa
